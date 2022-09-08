@@ -1,0 +1,1 @@
+{'used_resources': {'water': 0, 'milk': 0, 'coffee': 0}, 'sales': {'expresso': 0, 'latte': 0, 'cappuccino': 0}, 'coins_in_till': {'pennies': 0, 'nickles': 0, 'dimes': 0, 'quarters': 0, 'half-dollars': 0, 'small-dollars': 0}, 'coins_in_deposit': {'pennies': 0, 'nickles': 0, 'dimes': 0, 'quarters': 0, 'half-dollars': 0, 'small-dollars': 0}}
