@@ -10,20 +10,23 @@
 # TODO Move menu choices to menu.py
 # TODO Create a recipe.py
 # TODO Create a refill ingredients secret menu choice with logging using an ingredients.py
+# DONE Create and Update lifetime counters for beverages served.
 # Rest in Peace Queen Elizabeth the 2nd of England. May you find rest.
 
-import ast
+# import ast
 from datetime import datetime
 from os import system
+import pickle
+import json
 from menu import MENU
 from resources import resources
 from coins import coins # Till quantities to provide change: Pennies, nickles, dimes, quarters, half-dollars, small-dollars
 
 
 system('clear')
-print(MENU) # Dict in a Dict
-print(resources) # dict
-print(coins)
+# print(MENU) # Dict in a Dict
+# print(resources) # dict
+# print(coins)
 
 # Global Variables
 beverage = {}
@@ -32,15 +35,19 @@ price = float(0.00)
 change = float(0.00)
 beverages_served = 0
 
-def get_beverages_served_lifetime():
-    f = open('DAY_015/coffee_machine/reports/coffee_served.log')
-    beverages_served = f.read()
-    beverages_served_dict = ast.literal_eval(beverages_served)
+# def create_a_json(total_today_served, expresso_today_served, latte_today_served, cappuccino_today_served):
+#     beverages_served = {"total_served_lifetime": total_today_served, "expresso_served_lifetime": expresso_today_served, "latte_served_lifetime": latte_today_served, "cappuccino_served_lifetime": cappuccino_today_served }
     
-    print(beverages_served)
-    print(type(beverages_served))
-    print(beverages_served_dict)
-    print(type(beverages_served_dict))
+#     json_dict = json.dumps(beverages_served)
+#     f = open('reports/coffee_served.json', 'w')
+#     f.write(json_dict)
+#     f.close()
+
+def get_beverages_served_lifetime():
+        
+    # print(beverages_served_dict)
+    with open('reports/coffee_served.json') as json_file:
+        beverages_served_dict = json.load(json_file)
     return beverages_served_dict
 
 # For testing
@@ -52,17 +59,22 @@ cappuccino_today_served = 20
 def update_beverages_served_lifetime(total_today_served, expresso_today_served, latte_today_served, cappuccino_today_served):
     beverages_served_lifetime = get_beverages_served_lifetime()
     print(beverages_served_lifetime)
-    print(beverages_served_lifetime(total_served_lifetime))
-    # beverages_served_lifetime.update({"total_served_lifetime": (int("total_served_lifetime") + total_today_served), "expresso_served_lifetime": (int("expresso_served_lifetime") + expresso_today_served), "latte_served_lifetime": (int("latte_served_lifetime") + latte_today_served), "cappuccino_served_lifetime": (int("cappuccino_served_lifetime") + cappuccino_today_served)})
-    # print(beverages_served_lifetime)
-    # print(type(beverages_served_lifetime))
-    # f = open('DAY_015/coffee_machine/reports/coffee_served.log', "w")
-    # f.write(beverages_served_lifetime)
-    
-    
-#     f = open('DAY_015/coffee_machine/reports/coffee_served.log')
-#     beverages_served = f.read()
-#     beverages_served{total_served{}} =    
+
+# This feels messy
+    total_today_served = {"total_served_lifetime": (beverages_served_lifetime.get("total_served_lifetime") + total_today_served)}
+    expresso_today_served = {"expresso_served_lifetime": (beverages_served_lifetime.get("expresso_served_lifetime") + expresso_today_served)}
+    latte_today_served = {"latte_served_lifetime": (beverages_served_lifetime.get("latte_served_lifetime") + latte_today_served)}
+    cappuccino_today_served = {"cappuccino_served_lifetime": (beverages_served_lifetime.get("cappuccino_served_lifetime") + cappuccino_today_served)}
+    beverages_served_lifetime.update(total_today_served)
+    beverages_served_lifetime.update(expresso_today_served)
+    beverages_served_lifetime.update(latte_today_served)
+    beverages_served_lifetime.update(cappuccino_today_served)
+        
+    json_dict = json.dumps(beverages_served_lifetime)
+    f = open('reports/coffee_served.json', 'w')
+    f.write(json_dict)
+    f.close()
+  
 
 # Menu Toggles Should be False on boot for initial setup
 cleaning_prompt = True
@@ -111,13 +123,13 @@ machine_report = {
     }        
 }
     
-# Testing writting to file. It works, Yeehaw.
-print(machine_report)
-print(datetime.now())
-report_file_name = "report_" + str(datetime.now()) + ".log"
-f = open("DAY_015/coffee_machine/reports/" + report_file_name, "w")
-f.write(str(machine_report))
-f.close()
+# report_file_name = "report_" + str(datetime.now()) + ".log"
+# f = open("reports/" + report_file_name, "w")
+
+# f.write(str(machine_report))
+
+# f.close()
+
 get_beverages_served_lifetime()
 update_beverages_served_lifetime(total_today_served,expresso_today_served, latte_today_served, cappuccino_today_served)
 
