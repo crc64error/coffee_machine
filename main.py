@@ -34,9 +34,13 @@ recipe = {}
 price = float(0.00)
 change = float(0.00)
 beverages_served = 0
+total_served_today = 0
+expresso_served_today = 0
+latte_served_today = 0
+cappuccino_served_today = 0
 
-# def create_a_json(total_today_served, expresso_today_served, latte_today_served, cappuccino_today_served):
-#     beverages_served = {"total_served_lifetime": total_today_served, "expresso_served_lifetime": expresso_today_served, "latte_served_lifetime": latte_today_served, "cappuccino_served_lifetime": cappuccino_today_served }
+# def create_a_json(total_served_today, expresso_served_today, latte_served_today, cappuccino_served_today):
+#     beverages_served = {"total_served_lifetime": total_served_today, "expresso_served_lifetime": expresso_served_today, "latte_served_lifetime": latte_served_today, "cappuccino_served_lifetime": cappuccino_served_today }
     
 #     json_dict = json.dumps(beverages_served)
 #     f = open('reports/coffee_served.json', 'w')
@@ -44,32 +48,36 @@ beverages_served = 0
 #     f.close()
 
 def get_beverages_served_lifetime():
-        
-    # print(beverages_served_dict)
+    """ Get lifetime counts of beverages served
+
+    Returns:
+        dict: The count of all beverages served by this machine for life.
+    """
     with open('reports/coffee_served.json') as json_file:
         beverages_served_dict = json.load(json_file)
     return beverages_served_dict
 
-# For testing
-total_today_served = 120
-expresso_today_served = 40
-latte_today_served = 60
-cappuccino_today_served = 20
+def update_beverages_served_lifetime(total_served_today, expresso_served_today, latte_served_today, cappuccino_served_today):
+    """Update lifetime count of beverages served
 
-def update_beverages_served_lifetime(total_today_served, expresso_today_served, latte_today_served, cappuccino_today_served):
+    Args:
+        total_served_today (int): int
+        expresso_served_today (int): int
+        latte_served_today (int): int
+        cappuccino_served_today (int): int
+    """
     beverages_served_lifetime = get_beverages_served_lifetime()
     print(beverages_served_lifetime)
-
-# This feels messy
-    total_today_served = {"total_served_lifetime": (beverages_served_lifetime.get("total_served_lifetime") + total_today_served)}
-    expresso_today_served = {"expresso_served_lifetime": (beverages_served_lifetime.get("expresso_served_lifetime") + expresso_today_served)}
-    latte_today_served = {"latte_served_lifetime": (beverages_served_lifetime.get("latte_served_lifetime") + latte_today_served)}
-    cappuccino_today_served = {"cappuccino_served_lifetime": (beverages_served_lifetime.get("cappuccino_served_lifetime") + cappuccino_today_served)}
-    beverages_served_lifetime.update(total_today_served)
-    beverages_served_lifetime.update(expresso_today_served)
-    beverages_served_lifetime.update(latte_today_served)
-    beverages_served_lifetime.update(cappuccino_today_served)
-        
+    # This feels messy
+    total_served_today = {"total_served_lifetime": (beverages_served_lifetime.get("total_served_lifetime") + total_served_today)}
+    expresso_served_today = {"expresso_served_lifetime": (beverages_served_lifetime.get("expresso_served_lifetime") + expresso_served_today)}
+    latte_served_today = {"latte_served_lifetime": (beverages_served_lifetime.get("latte_served_lifetime") + latte_served_today)}
+    cappuccino_served_today = {"cappuccino_served_lifetime": (beverages_served_lifetime.get("cappuccino_served_lifetime") + cappuccino_served_today)}
+    beverages_served_lifetime.update(total_served_today)
+    beverages_served_lifetime.update(expresso_served_today)
+    beverages_served_lifetime.update(latte_served_today)
+    beverages_served_lifetime.update(cappuccino_served_today)
+    # Write the file
     json_dict = json.dumps(beverages_served_lifetime)
     f = open('reports/coffee_served.json', 'w')
     f.write(json_dict)
@@ -89,7 +97,7 @@ in_machine_resources = {
     "coffee": {"status": 0, "capacity": 1000},
 }
 
-machine_report = {
+machine_report = { # Template of the machine report
     "used_resources": {
         "water": 0,
         "milk": 0,
@@ -131,7 +139,7 @@ machine_report = {
 # f.close()
 
 get_beverages_served_lifetime()
-update_beverages_served_lifetime(total_today_served,expresso_today_served, latte_today_served, cappuccino_today_served)
+update_beverages_served_lifetime(total_served_today,expresso_served_today, latte_served_today, cappuccino_served_today)
 
 def boot_machine():
     # Prompt for setup steps
@@ -149,16 +157,25 @@ def boot_machine():
         refill
 
 def shutdown_machine():
+    """Shutdown Process
+    """
     # Complete shutdown steps including unload_machine()
     print("Shutdown Procedure")
 
 def build_report():
+    """report building
+    """
     report_file_name = "report_" + datetime.now() + ".log"
     f = open(report_file_name, "w")
     f.write(machine_report)
     f.close()
 
 def refill(in_machine_resources):
+    """Refill all ingredients
+
+    Args:
+        in_machine_resources (dict): list of stock items, water, coffee, milk
+    """
 
     print("refill")
     
@@ -196,20 +213,6 @@ def make_beverage(beverage, recipe, in_machine_resources):
                  return "c"
         case _: # No match
             return "Invalid Selection, please try again"
-
-# def http_error(status): # Example of case switch statement
-#     match status:
-#         case 400:
-#             return "Bad request"
-#         case 404:
-#             return "Not found"
-#         case 418:
-#             return "I'm a teapot"
-
-#         # If an exact match is not confirmed, this last case will be used if provided
-#         case _:
-#             return "Something's wrong with the internet"
-
 
 coffee_emoji = "☕️"
 
