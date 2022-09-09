@@ -20,7 +20,7 @@ import pickle
 import json
 from menu import MENU
 from resources import resources
-from coins import coins # Till quantities to provide change: Pennies, nickles, dimes, quarters, half-dollars, small-dollars
+from coins import coins # Till quantities to provide change: Pennies, nickels, dimes, quarters, half-dollars, small-dollars
 
 
 system('clear')
@@ -115,7 +115,7 @@ machine_report = { # Template of the machine report
     },
     "coins_in_till": {
         "pennies": 0,
-        "nickles": 0,
+        "nickels": 0,
         "dimes": 0,
         "quarters": 0,
         "half-dollars": 0,
@@ -123,7 +123,7 @@ machine_report = { # Template of the machine report
     },
     "coins_in_deposit": {
         "pennies": 0,
-        "nickles": 0,
+        "nickels": 0,
         "dimes": 0,
         "quarters": 0,
         "half-dollars": 0,
@@ -131,12 +131,12 @@ machine_report = { # Template of the machine report
     }        
 }
     
-# report_file_name = "report_" + str(datetime.now()) + ".log"
-# f = open("reports/" + report_file_name, "w")
+report_file_name = "report_" + str(datetime.now()) + ".log"
+f = open("reports/" + report_file_name, "w")
 
-# f.write(str(machine_report))
+f.write(str(machine_report))
 
-# f.close()
+f.close()
 
 get_beverages_served_lifetime()
 update_beverages_served_lifetime(total_served_today,expresso_served_today, latte_served_today, cappuccino_served_today)
