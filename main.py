@@ -33,24 +33,21 @@ beverage = {}
 recipe = {}
 price = float(0.00)
 change = float(0.00)
-beverages_served = 0
-total_served_today = 0
-espresso_served_today = 0
-latte_served_today = 0
-cappuccino_served_today = 0
+
+# Beverage Counter
+beverage_served_counter = {'total_served_today': 0, 'espresso_served_today': 0, 'latte_served_today': 0, 'cappuccino_served_today': 0}
+
 in_machine_till = 0.00
 in_machine_coin_dispenser = 0
-in_machine_water = 0
-in_machine_milk = 0
-in_machine_coffee = 0
-in_machine_cups = 0
+
+# In machine ingredients
+in_machine_ingredients = {'water': 3000, 'milk': 3000, 'coffee': 1000, 'cups': 200}
+
 # Coins in coin dispenser
-machine_pennies = 0
-machine_nickles = 0
-machine_dimes = 0
-machine_quarters = 0
-machine_halves = 0
-machine_dollars = 0
+coin_dispenser = {'machine_pennies': 50, 'machine_nickels': 40, 'machine_dimes': 50, 'machine_quarters': 40, 'machine_halves': 40, 'machine_dollars': 50, }
+
+# Transaction_record carries the load of the work
+transaction_record = {'Date/Time': '', 'selection_code': '', 'selection': '', 'price': 0.00, 'pennies': 0, 'nickels': 0, 'dimes': 0, 'quarters': 0, 'half_dollars': 0, 'small_dollars': 0, }
 
 value_of_coins = 0.00
 value_of_till = 0.00
@@ -81,10 +78,10 @@ def create_a_json(total_served_today, espresso_served_today, latte_served_today,
     f.close()
 
 # Get the value of coins for reports and refilling the coin dispenser
-def get_value_of_coins(pennies, nickels, dimes, quarters, halves, dollars):
-    value_of_coins = 0.00
-    value_of_coins = (pennies * .01) + (nickels * .05) + (dimes * .1) + (quarters * .25) + (halves * .5) + (dollars * 1)
-    return value_of_coins
+def get_value_of_coins(transaction_record):
+    transaction_record['tender'] = (transaction_record['pennies'] * .01) + (transaction_record['nickels'] * .05) + (transaction_record['dimes'] * .1) + (transaction_record['quarters'] * .25) + (transaction_record['half_dollars'] * .5) + (transaction_record['small_dollars'] * 1)
+    print(transaction_record)
+    return transaction_record
 
 def get_beverages_served_lifetime():
     """ Get lifetime counts of beverages served
@@ -151,172 +148,197 @@ def update_cappuccino_served_today(total_served_today, cappuccino_served_today):
     cappuccino_served_today += 1
     return total_served_today, cappuccino_served_today
 
-def check_for_cleaning(total_served_today):
-    if total_served_today > 200:
+def check_for_cleaning(beverage_served_counter):
+    if beverage_served_counter['total_served_today'] > 200:
         cleaning_prompt = True
 
-def check_for_restock(in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups):
-    if in_machine_water < 500:
-        refill = True
-    elif in_machine_milk < 300:
-        refill = True
-    elif in_machine_coffee < 48:
-        refill = True
-    elif in_machine_cups < 5:
-        refill = True
+def check_for_restock(in_machine_ingredients):
+    if in_machine_ingredients['water'] < 500 or in_machine_ingredients['milk'] < 300 or in_machine_ingredients['coffee'] < 48 or in_machine_ingredients['cups'] < 5:
+        refill_prompt = True
+    else: 
+        refill_prompt = False
     
-def start_a_transaction(refill):
-    while refill is not True:
-        selection_code = input("Would you like an (E)xpresso, (L)atte or (C)appuccino").lower() # Technically, this would be three individual buttons, but, you know.
-        if selection_code == "e":
-            selection = "espresso"
-        elif selection_code == "l":
-            selection = "latte"
-        elif selection_code == "c":
-            selection = "cappuccino"
-        elif selection_code == "cleaning":
-            selection = "cleaning"
-        elif selection_code == "refill":
-            selection = "refill"
-        elif selection_code == "coins":
-            selection = "till"
-        elif selection_code == "shutdown":
-            selection = "shutdown"
+def start_a_transaction(refill_prompt):
+    while refill_prompt is not True:
+        transaction_record['Date/Time'] = str(datetime.now())
+        transaction_record['selection_code'] = input("Would you like an (E)xpresso, (L)atte or (C)appuccino: ").lower() # Technically, this would be three individual buttons, but, you know.
+        if transaction_record['selection_code'] == "e":
+            transaction_record['selection'] = "espresso"
+        elif transaction_record['selection_code'] == "l":
+            transaction_record['selection'] = "latte"
+        elif transaction_record['selection_code'] == "c":
+            transaction_record['selection'] = "cappuccino"
+        elif transaction_record['selection_code'] == "cleaning":
+            transaction_record['selection'] = "cleaning"
+        elif transaction_record['selection_code'] == "refill":
+            transaction_record['selection'] = "refill"
+        elif transaction_record['selection_code'] == "coins":
+            transaction_record['selection'] = "till"
+        elif transaction_record['selection_code'] == "shutdown":
+            transaction_record['selection'] = "shutdown"
         else:
             print("The employee is out of order. Please try again.")
             start_a_transaction()
-        return selection
+        check_transaction_for_service_entries(transaction_record)
     print("Machine is waiting for a refill, please alert staff.")
 
-def check_transaction_for_service_entries(selection):
-    if selection ==  "espresso" or selection == "latte" or selection == "cappuccino":
-        price_a_transaction(selection)
-    elif selection == "cleaning":
+def check_transaction_for_service_entries(transaction_record):
+    if transaction_record['selection'] ==  "espresso" or transaction_record['selection'] == "latte" or transaction_record['selection'] == "cappuccino":
+        price_a_transaction(transaction_record)
+    elif transaction_record['selection'] == "cleaning":
         clean_machine()
-    elif selection == "refill":
+    elif transaction_record['selection'] == "refill":
         refill_machine()
-    elif selection == "till":
+    elif transaction_record['selection'] == "till":
         refill_coin_dispenser
-    elif selection == "shutdown":
+    elif transaction_record['selection'] == "shutdown":
         shutdown_machine()
 
-def price_a_transaction(selection):
-    if selection == "espresso":
-        cost = espresso_cost
-    elif selection == "latte":
-        cost = latte_cost
-    elif selection == "cappuccino":
-        cost = cappuccino_cost
-    make_some_money(cost, selection)
+def price_a_transaction(transaction_record):
+    if transaction_record['selection'] == "espresso":
+        transaction_record['price'] = espresso_cost
+        transaction_record['balance'] = espresso_cost
+    elif transaction_record['selection'] == "latte":
+        transaction_record['price'] = latte_cost
+        transaction_record['balance'] = latte_cost
+    elif transaction_record['selection'] == "cappuccino":
+        transaction_record['price'] = cappuccino_cost
+        transaction_record['balance'] = cappuccino_cost
+    print(f"price_a_transaction: {transaction_record}")
+    make_some_money(transaction_record)
 
-def make_some_money(cost, selection):
-    print(f"Your price for your {selection} is ${'{0:.2f}'.format(cost)}. Insert coin(s)")
-    coins_in = { "pennies": 0, "nickels": 0, "dimes": 0, "quarters": 0, "half_dollars": 0, "small_dollars": 0 }
-    coins_in["dollars"] = int(input("Dollar Coins: "))
-    coins_in["half_dollars"] = int(input("Half Dollar Coins: "))
-    coins_in["quarters"] = int(input("Quarters: "))
-    coins_in["dimes"] = int(input("Dimes: "))
-    coins_in["nickels"] = int(input("Nickels: "))
-    coins_in["pennies"] = int(input("Pennies: "))
-    check_tender(coins_in, cost)
+def make_some_money(transaction_record):
+    print(f"Your price for your {transaction_record['selection']} is ${'{0:.2f}'.format(transaction_record['price'])}. Insert coin(s)")
+    print(transaction_record)
+    transaction_record["small_dollars"] = int(input("Dollar Coins: "))
+    transaction_record["half_dollars"] = int(input("Half Dollar Coins: "))
+    transaction_record["quarters"] = int(input("Quarters: "))
+    transaction_record["dimes"] = int(input("Dimes: "))
+    transaction_record["nickels"] = int(input("Nickels: "))
+    transaction_record["pennies"] = int(input("Pennies: "))
+    print(f"make_some_money: {transaction_record}")
+    check_tender(transaction_record)
     
     
-def check_tender(coins_in, cost, selection):
-    get_value_of_coins(coins_in)
-    if value_of_coins < cost:
-        cost -= value_of_coins
-        make_some_money(cost, selection)
-    elif value_of_coins > cost:
-        change = value_of_coins - cost
-        give_change(change, cost, selection)
-    elif value_of_coins == cost:
-        prepare_beverage(selection)
+def check_tender(transaction_record):
+    get_value_of_coins(transaction_record)
+    if transaction_record['tender'] < transaction_record['price']:
+        transaction_record['balance'] = transaction_record['price'] - transaction_record['tender']
+        make_some_money(transaction_record)
+    elif transaction_record['tender'] > transaction_record['price']:
+        transaction_record['balance'] = 0
+        transaction_record['change'] = transaction_record['tender'] - transaction_record['price']
+        give_change(transaction_record, coin_dispenser)
+    elif transaction_record['tender'] == transaction_record['price']:
+        prepare_beverage(transaction_record, in_machine_ingredients, beverage_served_counter, refill_prompt)
+    print(f"check_tender: {transaction_record}")
         
-def give_change(change, cost, selection):
+def give_change(transaction_record, coin_dispenser):
     print("give_change")
-    while change >= 1.00 and machine_dollars > 0:
+    change = transaction_record['change']
+    while change >= 1.00 and coin_dispenser['machine_dollars'] > 0:
         print("Dispensing Dollar Coin")
         change -= 1
-        machine_dollars -= 1
-    while change >= .50 and machine_halves > 0:
+        coin_dispenser['machine_dollars'] -= 1
+    while change >= .50 and coin_dispenser['machine_halves'] > 0:
         print("Dispensing half dollars")
         change -= .5
-        machine_halves -= 1
-    while change >= .25 and machine_quarters > 0:
+        coin_dispenser['machine_halves'] -= 1
+    while change >= .25 and coin_dispenser['machine_quarters'] > 0:
         print("Dispensing quarters")
         change -= .25
-        machine_quarters -= 1
-    while change >= .1 and machine_dimes > 0:
+        coin_dispenser['machine_quarters'] -= 1
+    while change >= .1 and coin_dispenser['machine_dimes'] > 0:
         print("Dispensing dimes")
         change -= .1
-        machine_dimes -= 1
-    while change >= .05 and machine_nickles > 0:
+        coin_dispenser['machine_dimes'] -= 1
+    while change >= .05 and coin_dispenser['machine_nickels'] > 0:
         print("Dispensing nickels")
         change -= .05
-        machine_nickles -= 1
-    while change >= .01 and machine_pennies > 0:
+        coin_dispenser['machine_nickels'] -= 1
+    while change >= .01 and coin_dispenser['machine_pennies'] > 0:
         print("Dispensing pennies")
         change -= .01
-        machine_pennies -= 1
+        coin_dispenser['machine_pennies'] -= 1
     if change > 0: 
-        print(f"Machine ran out of change, please wait for your beverage, then see a cashier, and tell them you are owed {change}")
+        print(f"Machine ran out of change, please wait for your beverage, then see a cashier, let them know you are owed {change}")
         cleaning_prompt = True
-    prepare_beverage(selection)
+    print(f"give_change: {transaction_record}")
+    prepare_beverage(transaction_record, in_machine_ingredients, beverage_served_counter, refill_prompt)
 
     
-def prepare_beverage(selection):
+def prepare_beverage(transaction_record, in_machine_ingredients, beverage_served_counter, refill_prompt):
     print("prepare_beverage")
-    if selection == "espresso":
+    if transaction_record['selection'] == "espresso":
+        print(espresso_menu)
         water = espresso_recipe['water']
         milk = espresso_recipe['milk']
         coffee = espresso_recipe['coffee']
-        in_machine_water -= water
-        in_machine_milk -= milk
-        in_machine_coffee -= coffee
-        in_machine_cups -= 1
-        total_served_today += 1
-        espresso_served_today += 1
+        in_machine_ingredients['water'] -= water
+        in_machine_ingredients['milk'] -= milk
+        in_machine_ingredients['coffee'] -= coffee
+        in_machine_ingredients['cups'] -= 1
+        beverage_served_counter['total_served_today'] += 1
+        beverage_served_counter['espresso_served_today'] += 1
         print("Your delicious hot and fresh espresso is ready. Enjoy")
-        check_for_cleaning(total_served_today)
-        check_for_restock(in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups)
+        check_for_cleaning(beverage_served_counter)
+        check_for_restock(in_machine_ingredients)
     
-    if selection == "latte":
+    elif transaction_record['selection'] == "latte":
         water = latte_recipe['water']
         milk = latte_recipe['milk']
         coffee = latte_recipe['coffee']
-        in_machine_water -= water
-        in_machine_milk -= milk
-        in_machine_coffee -= coffee
-        in_machine_cups -= 1
-        total_served_today += 1
-        latte_served_today += 1
+        in_machine_ingredients['water'] -= water
+        in_machine_ingredients['milk'] -= milk
+        in_machine_ingredients['coffee'] -= coffee
+        in_machine_ingredients['cups'] -= 1
+        beverage_served_counter['total_served_today'] += 1
+        beverage_served_counter['latte_served_today'] += 1
         print("Your delicious hot and fresh latte is ready. Enjoy")
-        check_for_cleaning(total_served_today)
-        check_for_restock(in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups)
+        check_for_cleaning(beverage_served_counter)
+        check_for_restock(in_machine_ingredients)
         
-    if selection == "cappuccino":
+    elif transaction_record['selection'] == "cappuccino":
         water = cappuccino_recipe['water']
         milk = cappuccino_recipe['milk']
         coffee = cappuccino_recipe['coffee']
-        in_machine_water -= water
-        in_machine_milk -= milk
-        in_machine_coffee -= coffee
-        in_machine_cups -= 1
-        total_served_today += 1
-        cappuccino_served_today += 1
+        in_machine_ingredients['water'] -= water
+        in_machine_ingredients['milk'] -= milk
+        in_machine_ingredients['coffee'] -= coffee
+        in_machine_ingredients['cups'] -= 1
+        beverage_served_counter['total_served_today'] += 1
+        beverage_served_counter['cappuccino_served_today'] += 1
         print("Your delicious hot and fresh Cappuccino is ready. Enjoy")
-        check_for_cleaning(total_served_today)
-        check_for_restock(in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups)
+        check_for_cleaning(beverage_served_counter)
+        check_for_restock(in_machine_ingredients)
+        
+    print(f"prepare_beverage: {transaction_record}")
+    if cleaning_prompt == False and refill_prompt == False:
+        start_a_transaction(refill_prompt) # Change this later depending on machine state after the last transaction
+    elif cleaning_prompt == True and refill_prompt == False:
+        print("Machine needs to be cleaned, please inform staff.")
+    elif cleaning_prompt == False and refill_prompt == True:
+        print("Machine is in need of refill, please inform staff.")
+    elif cleaning_prompt == True and refill_prompt == True:
+        print("Machine is in need of maintenance, please inform staff.")
+    
+    # Add transaction_record as json to a transaction json file
+    # Write the file
+    json_dict = json.dumps(transaction_record)
+    f = open('reports/transaction_records' + str(datetime.now()) + '.json', 'w')
+    f.write(json_dict)
+    f.close()
     
 
 # Menu Toggles Should be False on boot for initial setup
-cleaning_prompt = True
-have_an_espresso = False
-have_a_late = False
-have_a_cappuccino = False
+cleaning_prompt = False
+refill_prompt = False
+have_an_espresso = True
+have_a_late = True
+have_a_cappuccino = True
 
 # in_machine_resources
-def get_in_machine_quantities(in_machine_till, in_machine_coin_dispenser, in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups, machine_nickles, machine_dimes, machine_quarters, machine_halves, machine_dollars):
+def get_in_machine_quantities(in_machine_till, in_machine_coin_dispenser, in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups, machine_nickels, machine_dimes, machine_quarters, machine_halves, machine_dollars):
     # If booting
     # get file in_machine_resources.json and safe local variables
     #   in_machine_till
@@ -334,14 +356,14 @@ def get_in_machine_quantities(in_machine_till, in_machine_coin_dispenser, in_mac
         in_machine_coffee = in_machine_quantities_dict['coffee']
         in_machine_cups = in_machine_quantities_dict['cups']
         machine_pennies = in_machine_coin_dispenser['pennies']
-        machine_nickles = in_machine_coin_dispenser['nickels']
+        machine_nickels = in_machine_coin_dispenser['nickels']
         machine_dimes = in_machine_coin_dispenser['dimes']
         machine_quarters = in_machine_coin_dispenser['quarters']
         machine_halves = in_machine_coin_dispenser['half_dollars']
         machine_dollars = in_machine_coin_dispenser['small_dollars']
         
         # Troubleshooting
-        print(in_machine_till, in_machine_coin_dispenser, machine_pennies, in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups, machine_nickles, machine_dimes, machine_quarters, machine_halves, machine_dollars)
+        print(in_machine_till, in_machine_coin_dispenser, machine_pennies, in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups, machine_nickels, machine_dimes, machine_quarters, machine_halves, machine_dollars)
         
         
     # json_dict = json.dumps(beverages_served_lifetime)
@@ -350,7 +372,7 @@ def get_in_machine_quantities(in_machine_till, in_machine_coin_dispenser, in_mac
     # f.close()
     # return beverages_served_dict
     
-    return in_machine_till, in_machine_coin_dispenser, in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups, machine_nickles, machine_dimes, machine_quarters, machine_halves, machine_dollars
+    return in_machine_till, in_machine_coin_dispenser, in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups, machine_nickels, machine_dimes, machine_quarters, machine_halves, machine_dollars
 
 def till_in(till_deposit, report_pennies, report_nickels, report_dimes, report_quarters, report_halves, report_dollars):
     value_of_coins = get_value_of_coins(report_pennies, report_nickels, report_dimes, report_quarters, report_halves, report_dollars)
@@ -383,14 +405,14 @@ def refill_coin_dispenser():
     max_halves = max_coin_dispenser["half_dollars"]
     max_dollars = max_coin_dispenser["small_dollars"]
     machine_pennies = in_machine_coin_dispenser["pennies"]
-    machine_nickles = in_machine_coin_dispenser["nickels"]
+    machine_nickels = in_machine_coin_dispenser["nickels"]
     machine_dimes = in_machine_coin_dispenser["dimes"]
     machine_quarters = in_machine_coin_dispenser["quarters"]
     machine_halves = in_machine_coin_dispenser["half_dollars"]
     machine_dollars = in_machine_coin_dispenser["small_dollars"]
     
     report_pennies = max_pennies - machine_pennies
-    report_nickels = max_nickels - machine_nickles
+    report_nickels = max_nickels - machine_nickels
     report_dimes = max_dimes - machine_dimes
     report_quarters = max_quarters - machine_quarters
     report_halves = max_halves - machine_halves
@@ -447,7 +469,7 @@ machine_report = { # Template of the machine report
         "latte": 0,
         "cappuccino": 0
     },
-    "coins_in_till": {
+    "transaction_record_till": {
         "pennies": 0,
         "nickels": 0,
         "dimes": 0,
@@ -455,7 +477,7 @@ machine_report = { # Template of the machine report
         "half-dollars": 0,
         "small-dollars": 0
     },
-    "coins_in_deposit": {
+    "transaction_record_deposit": {
         "pennies": 0,
         "nickels": 0,
         "dimes": 0,
@@ -492,8 +514,11 @@ with open('menu.json') as json_file:
     # print(espresso_recipe)
     # print("$"'{0:.2f}'.format(espresso_cost))
 
+
+
+start_a_transaction(refill_prompt = False)
 # refill_coin_dispenser()
-# get_in_machine_quantities(in_machine_till, in_machine_coin_dispenser, in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups, machine_nickles, machine_dimes, machine_quarters, machine_halves, machine_dollars)
+# get_in_machine_quantities(in_machine_till, in_machine_coin_dispenser, in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups, machine_nickels, machine_dimes, machine_quarters, machine_halves, machine_dollars)
 # get_beverages_served_lifetime()
 # update_beverages_served_lifetime(total_served_today,espresso_served_today, latte_served_today, cappuccino_served_today)
 

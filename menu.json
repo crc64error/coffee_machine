@@ -2,6 +2,7 @@
     "espresso": {
         "ingredients": {
             "water": 50,
+            "milk": 0,
             "coffee": 24
         },
         "cost": 1.5
