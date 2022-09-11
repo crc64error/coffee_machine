@@ -16,7 +16,6 @@
 # import ast
 from datetime import datetime
 from os import system
-import pickle
 import json
 # from menu import MENU
 # from resources import resources
@@ -44,14 +43,15 @@ in_machine_coin_dispenser = 0
 in_machine_ingredients = {'water': 3000, 'milk': 3000, 'coffee': 1000, 'cups': 200}
 
 # Coins in coin dispenser
-coin_dispenser = {'machine_pennies': 50, 'machine_nickels': 40, 'machine_dimes': 50, 'machine_quarters': 40, 'machine_halves': 40, 'machine_dollars': 50, }
+coin_dispenser = {'machine_pennies': 50, 'machine_pennies_max': 50, 'machine_nickels': 40, 'machine_nickels_max': 40, 'machine_dimes': 50, 'machine_dimes_max': 50, 'machine_quarters': 40, 'machine_quarters_max': 40, 'machine_halves': 40, 'machine_halves_max': 40, 'machine_dollars': 50, 'machine_dollars_max': 50 }
+till_dump = { 'pennies': 0, 'nickels': 0, 'dimes': 0, 'quarters': 0, 'half_dollars': 0, 'small_dollars': 0, "value_in_till": 0.00 }
 
 # Transaction_record carries the load of the work
 transaction_record = {'Date/Time': '', 'selection_code': '', 'selection': '', 'price': 0.00, 'pennies': 0, 'nickels': 0, 'dimes': 0, 'quarters': 0, 'half_dollars': 0, 'small_dollars': 0, }
 
 value_of_coins = 0.00
 value_of_till = 0.00
-till_deposit = 0.00
+till_deposit = {'income': 0, 'till': 0}
 # Coins in machine
 pennies = 0
 nickels = 0
@@ -80,8 +80,68 @@ def create_a_json(total_served_today, espresso_served_today, latte_served_today,
 # Get the value of coins for reports and refilling the coin dispenser
 def get_value_of_coins(transaction_record):
     transaction_record['tender'] = (transaction_record['pennies'] * .01) + (transaction_record['nickels'] * .05) + (transaction_record['dimes'] * .1) + (transaction_record['quarters'] * .25) + (transaction_record['half_dollars'] * .5) + (transaction_record['small_dollars'] * 1)
+    transaction_record['price'] = transaction_record['price'] - transaction_record['tender']
+    refill_or_till(transaction_record, coin_dispenser)
+    
     print(transaction_record)
     return transaction_record
+
+def refill_or_till(transaction_record, coin_dispenser):
+    # pennies
+    if transaction_record['pennies'] > 0:
+        while coin_dispenser['machine_pennies'] < coin_dispenser['machine_pennies_max']:
+            transaction_record['pennies'] -= 1
+            coin_dispenser['machine_pennies'] += 1
+        while coin_dispenser['machine_pennies'] == coin_dispenser['machine_pennies_max'] and transaction_record['pennies'] > 0:
+            transaction_record['pennies'] -= 1
+            till_dump['pennies'] += 1
+            till_dump['value_in_till'] += .01
+    # Nickels
+    if transaction_record['nickels'] > 0:
+        while coin_dispenser['machine_nickels'] < coin_dispenser['machine_nickels_max']:
+            transaction_record['nickels'] -= 1
+            coin_dispenser['machine_nickels'] += 1
+        while coin_dispenser['machine_nickels'] == coin_dispenser['machine_nickels_max'] and transaction_record['nickels'] > 0:
+            transaction_record['nickels'] -= 1
+            till_dump['nickels'] += 1
+    # Dimes
+    if transaction_record['dimes'] > 0:
+        while coin_dispenser['machine_dimes'] < coin_dispenser['machine_dimes_max']:
+            transaction_record['dimes'] -= 1
+            coin_dispenser['machine_dimes'] += 1
+        while coin_dispenser['machine_dimes'] == coin_dispenser['machine_dimes_max'] and transaction_record['dimes'] > 0:
+            transaction_record['dimes'] -= 1
+            till_dump['dimes'] += 1
+    # Quarters
+    if transaction_record['quarters'] > 0:
+        while coin_dispenser['machine_quarters'] < coin_dispenser['machine_quarters_max']:
+            transaction_record['quarters'] -= 1
+            coin_dispenser['machine_quarters'] += 1
+        while coin_dispenser['machine_quarters'] == coin_dispenser['machine_quarters_max'] and transaction_record['quarters'] > 0:
+            transaction_record['quarters'] -= 1
+            till_dump['quarters'] += 1
+    # Half Dollars
+    if transaction_record['half_dollars'] > 0:
+        while coin_dispenser['machine_dollars'] < coin_dispenser['machine_dollars_max']:
+            transaction_record['half_dollars'] -= 1
+            coin_dispenser['machine_dollars'] += 1
+        while coin_dispenser['machine_dollars'] == coin_dispenser['machine_dollars_max'] and transaction_record['half_dollars'] > 0:
+            transaction_record['half_dollars'] -= 1
+            till_dump['half_dollars'] += 1
+    # Small Dollars
+    if transaction_record['small_dollars'] > 0:
+        while coin_dispenser['machine_dollars'] < coin_dispenser['machine_dollars_max']:
+            transaction_record['small_dollars'] -= 1
+            coin_dispenser['machine_dollars'] += 1
+        while coin_dispenser['machine_dollars'] == coin_dispenser['machine_dollars_max'] and transaction_record['small_dollars'] > 0:
+            transaction_record['small_dollars'] -= 1
+            till_dump['small_dollars'] += 1
+    tender_record = till_dump
+    till_deposit['income'] += transaction_record['tender']
+    till_deposit['till'] += till_dump['value_in_till']
+    
+    return transaction_record, coin_dispenser, till_deposit, till_dump
+    
 
 def get_beverages_served_lifetime():
     """ Get lifetime counts of beverages served
@@ -123,31 +183,6 @@ def update_beverages_served_lifetime(total_served_today, espresso_served_today, 
     f.write(json_dict)
     f.close()
     
-def update_espresso_served_today(total_served_today, espresso_served_today):
-    """ Increment values, total_served_today, espresso_served_today
-
-    Args:
-        total_served_today (int): total beverages served today
-        espresso_served_today (int): total espresso served today
-
-    Returns:
-        total_served_today (int): total beverages served today
-        espresso_served_today (int): total espresso served today
-    """
-    total_served_today += 1
-    espresso_served_today += 1
-    return total_served_today, espresso_served_today
-  
-def update_latte_served_today(total_served_today, latte_served_today):
-    total_served_today += 1
-    latte_served_today += 1
-    return total_served_today, latte_served_today
-
-def update_cappuccino_served_today(total_served_today, cappuccino_served_today):
-    total_served_today += 1
-    cappuccino_served_today += 1
-    return total_served_today, cappuccino_served_today
-
 def check_for_cleaning(beverage_served_counter):
     if beverage_served_counter['total_served_today'] > 200:
         cleaning_prompt = True
@@ -264,7 +299,7 @@ def give_change(transaction_record, coin_dispenser):
         print(f"Machine ran out of change, please wait for your beverage, then see a cashier, let them know you are owed {change}")
         cleaning_prompt = True
     print(f"give_change: {transaction_record}")
-    prepare_beverage(transaction_record, in_machine_ingredients, beverage_served_counter, refill_prompt)
+    prepare_beverage(transaction_record, in_machine_ingredients, beverage_served_counter, refill_prompt, till_deposit, till_dump)
 
     
 def prepare_beverage(transaction_record, in_machine_ingredients, beverage_served_counter, refill_prompt):
@@ -312,7 +347,28 @@ def prepare_beverage(transaction_record, in_machine_ingredients, beverage_served
         check_for_cleaning(beverage_served_counter)
         check_for_restock(in_machine_ingredients)
         
-    print(f"prepare_beverage: {transaction_record}")
+    # Add transaction_record as json to a transaction json file
+    # We need to create or open a file named transaction_records_09-11-2022.json
+    # We then need to start adding transaction records to the file
+    # At shutdown, the file needs to be emailed to the admin address, along with other report files.
+    
+    print('open')
+    date = datetime.now()
+    date = date.strftime("%d-%m-%Y")
+    f = open('reports/transaction_records_' + date + '.json', 'a+')
+    f.write(",\n")
+    json_dict = json.dumps(transaction_record)
+    f.write(json_dict)
+    f.write(",\n")
+    json_dict = json.dumps(till_deposit)
+    f.write(json_dict)
+    f.write(",\n")
+    json_dict = json.dumps(till_dump)
+    f.write(json_dict)
+    f.write(",\n")
+    f.close()
+    transaction_record = { "Date/Time": "", "selection_code": "", "selection": "", "price": 0, "pennies": 0, "nickels": 0, "dimes": 0, "quarters": 0, "half_dollars": 0, "small_dollars": 0, "balance": 0, "tender": 0, "change": 0}
+    # print(f"prepare_beverage: {transaction_record}")
     if cleaning_prompt == False and refill_prompt == False:
         start_a_transaction(refill_prompt) # Change this later depending on machine state after the last transaction
     elif cleaning_prompt == True and refill_prompt == False:
@@ -322,12 +378,7 @@ def prepare_beverage(transaction_record, in_machine_ingredients, beverage_served
     elif cleaning_prompt == True and refill_prompt == True:
         print("Machine is in need of maintenance, please inform staff.")
     
-    # Add transaction_record as json to a transaction json file
-    # Write the file
-    json_dict = json.dumps(transaction_record)
-    f = open('reports/transaction_records' + str(datetime.now()) + '.json', 'w')
-    f.write(json_dict)
-    f.close()
+
     
 
 # Menu Toggles Should be False on boot for initial setup
