@@ -1,0 +1,76 @@
+{
+    "Start_of_day": "",
+    "End_of_day": "",
+    "tender_in": {
+        "pennies": 0,
+        "nickels": 0,
+        "dimes": 0,
+        "quarters": 0,
+        "half_dollars": 0,
+        "small_dollars": 0,
+        "tender_value": 0.0
+    },
+    "tender_out": {
+        "pennies": 0,
+        "nickels": 0,
+        "dimes": 0,
+        "quarters": 0,
+        "half_dollars": 0,
+        "small_dollars": 0,
+        "tender_value": 0.0
+    },
+    "till_dump": {
+        "pennies": 0,
+        "nickels": 0,
+        "dimes": 0,
+        "quarters": 0,
+        "half_dollars": 0,
+        "small_dollars": 0,
+        "tender_value": 0.0
+    },
+    "lifetime_tender": {
+        "pennies": 0,
+        "nickels": 0,
+        "dimes": 0,
+        "quarters": 0,
+        "half_dollars": 0,
+        "small_dollars": 0,
+        "tender_value": 0.0
+    },
+    "ingredients_out": {
+        "water": 0,
+        "milk": 0,
+        "coffee": 0,
+        "sugar": 0,
+        "cream": 0,
+        "cups": 0
+    },
+    "beverages_served": {
+        "lifetime_beverages_served": 0,
+        "lifetime_espresso_served": 0,
+        "lifetime_latte_served": 0,
+        "lifetime_cappuccino_served": 0,
+        "lifetime_mocha_served": 0,
+        "lifetime_americano_served": 0,
+        "lifetime_cortado_served": 0,
+        "today_beverages_served": 0,
+        "today_espresso_served": 0,
+        "today_latte_served": 0,
+        "today_cappuccino_served": 0,
+        "today_mocha_served": 0,
+        "today_americano_served": 0,
+        "today_cortado_served": 0
+    },
+    "cleaning_record": {
+        "last_cleaned": "",
+        "cleaning_frequency": 0,
+        "cleaning_count": 0
+    },
+    "restock_record": {
+        "last_restocked": "",
+        "restock_frequency": 0,
+        "restock_count": 0
+    },
+    "hours_online": 0,
+    "hours_offline": 0
+}

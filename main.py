@@ -1,44 +1,47 @@
-# TODO Prompt user for beverage choice
-# TODO (o)ff to turn of the machine
-# TODO (r) to print a report with current resources and money in the till
-# TODO When a user places and order, confirm resources available
-# TODO *Improve resource report by only presenting choices if there is enough of resources to produce it
-# TODO Coin processing
-# TODO Check transaction for enough to cover cost
-# TODO *Instead of refunding the money allow the user to insert more money or request refund
-# TODO Make the beverage
-# TODO Move menu choices to menu.py
-# TODO Create a recipe.py
-# TODO Create a refill ingredients secret menu choice with logging using an ingredients.py
-# DONE Create and Update lifetime counters for beverages served.
 # Rest in Peace Queen Elizabeth the 2nd of England. May you find rest.
-
-# import ast
 from datetime import datetime
 from os import system
 import json
-# from menu import MENU
-# from resources import resources
-# from coins import coins # Till quantities to provide change: Pennies, nickels, dimes, quarters, half-dollars, small-dollars
+from logo import logo
+from twilio.rest import Client
+import config
 
 
 system('clear')
-# print(MENU) # Dict in a Dict
-# print(resources) # dict
-# print(coins)
 
-# Global Variables
-beverage = {}
-recipe = {}
-price = float(0.00)
-change = float(0.00)
+def json_file_to_dict(json_file):
+    with open(json_file) as f:
+        data = json.load(f)
+    return data
 
+############################ Global Variables ############################
+##
+
+   
 # Beverage Counter
-beverage_served_counter = {'total_served_today': 0, 'espresso_served_today': 0, 'latte_served_today': 0, 'cappuccino_served_today': 0}
+beverage_served_counter = json_file_to_dict('process_records/process_record.json')
 
-in_machine_till = 0.00
-in_machine_coin_dispenser = 0
-
+# Transaction Record Template
+transaction_record = {
+    "loyalty_uuid": "",
+    "transaction_id": "",
+    "transaction_qr_code": "",
+    "transaction_type": "",
+    "transaction_amount": "",
+    "transaction_date": "",
+    "transaction_time": "",
+    "transaction_status": "",
+    "transaction_remarks": "",
+    "Date/Time": "",
+    "selection_code": "",
+    "selection": "",
+    "price": 0.0,
+    "transaction": {
+        "balance": 0,
+        "tender_value": 0.0,
+        "change": 0.0
+    }
+}
 # In machine ingredients
 in_machine_ingredients = {'water': 3000, 'milk': 3000, 'coffee': 1000, 'cups': 200}
 
@@ -47,7 +50,7 @@ coin_dispenser = {'machine_pennies': 50, 'machine_pennies_max': 50, 'machine_nic
 till_dump = { 'pennies': 0, 'nickels': 0, 'dimes': 0, 'quarters': 0, 'half_dollars': 0, 'small_dollars': 0, "value_in_till": 0.00 }
 
 # Transaction_record carries the load of the work
-transaction_record = {'Date/Time': '', 'selection_code': '', 'selection': '', 'price': 0.00, 'pennies': 0, 'nickels': 0, 'dimes': 0, 'quarters': 0, 'half_dollars': 0, 'small_dollars': 0, }
+order = {'Date/Time': '', 'selection_code': '', 'selection': '', 'price': 0.00, 'pennies': 0, 'nickels': 0, 'dimes': 0, 'quarters': 0, 'half_dollars': 0, 'small_dollars': 0, }
 
 value_of_coins = 0.00
 value_of_till = 0.00
@@ -60,22 +63,157 @@ quarters = 0
 halves = 0
 dollars = 0
 
-# For initial setup of machine
-def create_a_json(total_served_today, espresso_served_today, latte_served_today, cappuccino_served_today):
-    """create file for beverages served
+sms_enabled = False
 
-    Args:
-        total_served_today (int): total of all beverages
-        espresso_served_today (int): total of espressos
-        latte_served_today (int): total of lattes
-        cappuccino_served_today (int): total of cappuccinos
-    """
-    beverages_served = {"total_served_lifetime": total_served_today, "espresso_served_lifetime": espresso_served_today, "latte_served_lifetime": latte_served_today, "cappuccino_served_lifetime": cappuccino_served_today }
+############################ Step Thru and Notes #############################
+##
+# Step 1: On machine boot:
+# 1.1: Load the coin dispenser status from the coin_dispenser.json file
+# 1.2: Load the ingredient dispenser status from the ingredient_dispenser.json file
+# 1.3: Check Cleaning Status -> If Cleaning is required, cleaning_prompt = True, else cleaning_prompt = False
+# 1.4: Check Restock Status -> If Restock is required, refill_prompt = True, else refill_prompt = False
+# 1.5: Check Network Status -> If Network is down, network_prompt = True, else network_prompt = False, Notify Staff, SMS, Email
+# 1.6: Load Lifetime counters for beverages, ingredients, and coins into local variables
+# Step 2: On customer approach:
+# 2.1: Present menu for loyalty card
+# 2.1.1: If customer has a valid loyalty card
+# 2.1.2: Check network for account updates, if updates are found, update local variables in loyalty_customers/loyalty_customers.py {dict}
+# 2.1.3: Load loyalty discount to local variable
+# 2.2: Check for available beverages -> menu_options
+# 2.3: Present menu for beverage selection
+# 2.4: Present menu for beverage size
+# 2.5: Present menu for beverage extras
+# Step 3: On beverage selection:
+# 3.0.1: Generate uuid for transaction -> "transaction_id"
+# 3.0.2: Generate qr code for transaction -> "transaction_qr_code"
+# 3.1: Load cost of beverage and extras to active_transaction_record
+# 3.2: Process Payment - coins, debit, iris-scan, apple pay, etc.
+# 3.2.1: If coins: Check total_tender_value against beverage_cost
+# 3.2.2: If coins over cost, dispense change
+# 3.2.3: If coins under cost, present option to return coins
+# 3.2.4: If coins under cost, and customer unable to continue, refund coins, start over
+# Step 4: On payment complete:
+# 4.1: Prepare beverage
+# 4.2: Dispense beverage
+# 4.3: Update beverage counter, today, and lifetime
+# 4.4: Update ingredient dispenser
+# 4.5: Print reciept
+# 4.6: Update coin dispenser, lifetime, sales, and today
+# 5.0: check for cleaning, restock, network
+##
+############################ End Step Thru and Notes #############################
+
+
+# Step 1: On machine boot:
+# 1.1: Load the coin dispenser status from the coin_dispenser.json file
+# 1.2: Load the ingredient dispenser status from the ingredient_dispenser.json file
+# 1.3: Check Cleaning Status -> If Cleaning is required, cleaning_prompt = True, else cleaning_prompt = False
+# 1.4: Check Restock Status -> If Restock is required, refill_prompt = True, else refill_prompt = False
+# 1.5: Check Network Status -> If Network is down, network_prompt = True, else network_prompt = False, Notify Staff, SMS, Email
+# 1.6: Load Lifetime counters for beverages, ingredients, and coins into local variables
+def boot_up():
+    print("Boot Up")
+    coin_dispenser = json_file_to_dict('process_records/coin_dispenser.json')
     
-    json_dict = json.dumps(beverages_served)
-    f = open('reports/coffee_served.json', 'w')
-    f.write(json_dict)
-    f.close()
+def send_sms(sms_message, sms_enabled):
+    if sms_enabled == True:
+        account_sid = config.account_sid
+        auth_token = config.auth_token
+        client = Client(account_sid, auth_token)
+        message = client.messages.create(
+            body=sms_message,
+            from_=config.from_number,
+            to=config.to_number
+        )
+        print(message.sid)
+        account_sid = config.account_sid 
+        auth_token = config.auth_token 
+        client = Client(account_sid, auth_token) 
+    
+        message = client.messages.create(   
+            messaging_service_sid='MGd22f7aab949a6990d2308c71466f2b40',
+            body= sms_message,      
+            to=config.account_receiver
+        )
+        # print(message.sid)
+    else:
+        print("SMS Disabled, Contact Staff!")
+    sms_records = message.sid
+        
+    
+def menu():
+    # Populate the menu with the available beverages
+    if coffee <= 500 or milk <= 1000 or water <= 1000 or cups <= 40 or chocolate <= 500 or vanilla <= 100 or honey <= 100:
+        contact_staff(sms_message="Coffee Machine needs attemtion, please restock!", sms_enabled)
+        
+    if water <= 400 and water > 350:
+        contact_staff(sms_message="Coffee Machine needs attemtion, water is low, please restock!")
+    elif water <= 350:
+        contact_staff(sms_message="Coffee Machine needs attemtion, water is empty, machine is disabled!")
+        
+    if coffee <= 200 and coffee > 64:
+        contact_staff(sms_message="Coffee Machine needs attemtion, coffee is low, please restock!")
+    elif coffee <= 64:
+        contact_staff(sms_message="Coffee Machine needs attemtion, coffee is empty, machine is disabled!")
+        
+    if milk <= 600 and milk > 150:
+        contact_staff(sms_message="Coffee Machine needs attemtion, milk is low, please restock!")
+    elif milk <= 150:
+        contact_staff(sms_message="Coffee Machine needs attemtion, milk is empty, machine is disabled!")
+        latte = False
+        Vanilla_Cappuccino = False
+        Caramel_Cappuccino = False
+        Cortado = False
+        mocha = False
+        
+    if cups <= 20 and cups > 5:
+        contact_staff(sms_message="Coffee Machine needs attemtion, cups are low, please restock!")
+    elif cups <= 5:
+        contact_staff(sms_message="Coffee Machine needs attemtion, cups are empty, machine is disabled!")
+        
+    if chocolate <= 100 and chocolate > 20:
+        contact_staff(sms_message="Coffee Machine needs attemtion, chocolate is low, please restock!")
+    elif chocolate <= 20:
+        contact_staff(sms_message="Coffee Machine needs attemtion, chocolate is empty, Mocha is disabled!")
+        mocha = False
+    
+    if vanilla <= 20 and vanilla > 5:
+        contact_staff(sms_message="Coffee Machine needs attemtion, vanilla is low, please restock!")
+    elif vanilla <= 5:
+        contact_staff(sms_message="Coffee Machine needs attemtion, vanilla is empty, Vanilla Cappuccino is disabled!")
+        vanilla_cappuccino = False
+    
+    if honey <= 20 and honey > 5:
+        contact_staff(sms_message="Coffee Machine needs attemtion, honey is low, please restock!")
+    elif honey <= 5:
+        contact_staff(sms_message="Coffee Machine needs attemtion, honey is empty, Cortado is disabled!")
+        cortado = False
+    
+    if caramel <= 40 and caramel > 10:
+        contact_staff(sms_message="Coffee Machine needs attemtion, caramel is low, please restock!")
+    elif caramel <= 10:
+        contact_staff(sms_message="Coffee Machine needs attemtion, caramel is empty, Caramel Cappuccino is disabled!")
+        caramel_cappuccino = False
+        
+
+        
+def contact_staff(sms_message):
+    print("Please contact a staff member.")
+    send_sms(sms_message)
+    send_email()
+    staff_contacted = True
+    while staff_contacted == True:
+        staff_contacted = input("Has a staff member been contacted? (y/n): ")
+        if staff_contacted == "y":
+            staff_contacted = False
+            print("Thank you.")
+        elif staff_contacted == "n":
+            staff_contacted = True
+            print("Please contact a staff member.")
+        else:
+            staff_contacted = True
+            print("Please enter 'y' or 'n'.")
+    return staff_contacted
 
 # Get the value of coins for reports and refilling the coin dispenser
 def get_value_of_coins(transaction_record):
@@ -178,7 +316,7 @@ def update_beverages_served_lifetime(total_served_today, espresso_served_today, 
     beverages_served_lifetime.update(latte_served_today)
     beverages_served_lifetime.update(cappuccino_served_today)
     # Write the file
-    json_dict = json.dumps(beverages_served_lifetime)
+    json_dict = json.dumps(beverages_served_lifetime, indent=4)
     f = open('reports/coffee_served.json', 'w')
     f.write(json_dict)
     f.close()
@@ -357,13 +495,13 @@ def prepare_beverage(transaction_record, in_machine_ingredients, beverage_served
     date = date.strftime("%d-%m-%Y")
     f = open('reports/transaction_records_' + date + '.json', 'a+')
     f.write(",\n")
-    json_dict = json.dumps(transaction_record)
+    json_dict = json.dumps(transaction_record, indent=4)
     f.write(json_dict)
     f.write(",\n")
-    json_dict = json.dumps(till_deposit)
+    json_dict = json.dumps(till_deposit, indent=4)
     f.write(json_dict)
     f.write(",\n")
-    json_dict = json.dumps(till_dump)
+    json_dict = json.dumps(till_dump, indent=4)
     f.write(json_dict)
     f.write(",\n")
     f.close()
@@ -494,7 +632,7 @@ def refill_coin_dispenser():
     print(coin_dispenser_report)
     
     # Write the file
-    json_dict = json.dumps(coin_dispenser_report)
+    json_dict = json.dumps(coin_dispenser_report, indent=4)
     report_file_name = "coin_dispenser_report_" + str(datetime.now()) + ".json"
     f = open("reports/" + report_file_name, "w")
     f.write(str(json_dict))
@@ -648,22 +786,47 @@ def check_resources(beverage, recipe): # This should run at the end of every tra
     print("Check Resources")
         
     
-def make_beverage(beverage, recipe, in_machine_resources):
-    match beverage:
-        case "e": # espresso
-            if have_an_espresso == True:
-                return "e"
-        case "l": # Latte
-            if have_a_late == True:
-                return "l"
-        case "c": # Cappuccino
-            if have_a_cappuccino == True:
-                 return "c"
-        case _: # No match
-            return "Invalid Selection, please try again"
-
 coffee_emoji = "☕️"
 
+############################################################################################################
+####### Learning Reference Area 
+############################################################################################################
+
+# # Dealing with nested Dicts
+# people = {1: {'Name': 'John', 'Age': '27', 'Sex': 'Male'},
+#           2: {'Name': 'Marie', 'Age': '22', 'Sex': 'Female'}}
+
+# for p_id, p_info in people.items():
+#     print("\nPerson ID:", p_id)
+    
+#     for key in p_info:
+#         print(key + ':', p_info[key])
 
 
+# # File handling
+# report_file_name = "report_" + str(datetime.now()) + ".log"
 
+# w to write, w+ to create or write, 
+# File access mode ‘a+’, creates opens the file for both read and writing. Also if file it doesn’t exist, and then it creates the file too.
+# f = open("reports/" + report_file_name, "w") 
+
+# f.write(str(machine_report))
+
+# f.close()
+
+# For initial setup of machine
+# def create_a_json(total_served_today, espresso_served_today, latte_served_today, cappuccino_served_today):
+#     """create file for beverages served
+
+#     Args:
+#         total_served_today (int): total of all beverages
+#         espresso_served_today (int): total of espressos
+#         latte_served_today (int): total of lattes
+#         cappuccino_served_today (int): total of cappuccinos
+#     """
+#     beverages_served = {"total_served_lifetime": total_served_today, "espresso_served_lifetime": espresso_served_today, "latte_served_lifetime": latte_served_today, "cappuccino_served_lifetime": cappuccino_served_today }
+    
+#     json_dict = json.dumps(beverages_served, indent = 4)
+#     f = open('reports/coffee_served.json', 'w')
+#     f.write(json_dict)
+#     f.close()

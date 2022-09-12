@@ -1,0 +1,15 @@
+{
+    "date/time": "",
+    "location": "",
+    "purchase": "",
+    "total": "",
+    "paid": "",
+    "change": "",
+    "loyalty": {
+        "name": "",
+        "points": "",
+        "discount": ""
+    },
+    "footer_message": "Thank You for your purchase. Please come again.",
+    "qr_code": ""
+}

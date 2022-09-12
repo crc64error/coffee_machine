@@ -3,7 +3,23 @@
         "ingredients": {
             "water": 50,
             "milk": 0,
-            "coffee": 24
+            "coffee": 24,
+            "chocolate": 0,
+            "vanilla": 0,
+            "caramel": 0,
+            "honey": 0
+        },
+        "cost": 1.0
+    },
+    "americano": {
+        "ingredients": {
+            "water": 350,
+            "milk": 0,
+            "coffee": 24,
+            "chocolate": 0,
+            "vanilla": 0,
+            "caramel": 0,
+            "honey": 0
         },
         "cost": 1.5
     },
@@ -11,16 +27,60 @@
         "ingredients": {
             "water": 200,
             "milk": 150,
-            "coffee": 24
+            "coffee": 36,
+            "chocolate": 0,
+            "vanilla": 0,
+            "caramel": 0,
+            "honey": 0
         },
         "cost": 2.5
     },
-    "cappuccino": {
+    "vanilla_cappuccino": {
         "ingredients": {
-            "water": 250,
-            "milk": 100,
-            "coffee": 24
+            "water": 150,
+            "milk": 200,
+            "coffee": 24,
+            "chocolate": 0,
+            "vanilla": 1,
+            "caramel": 0,
+            "honey": 0
         },
-        "cost": 3.0
+        "cost": 3.5
+    },
+    "caramel_cappuccino": {
+        "ingredients": {
+            "water": 150,
+            "milk": 190,
+            "coffee": 24,
+            "chocolate": 0,
+            "vanilla": 1,
+            "caramel": 10,
+            "honey": 0
+        },
+        "cost": 3.5
+    },
+    "cortado": {
+        "ingredients": {
+            "water": 150,
+            "milk": 200,
+            "coffee": 36,
+            "chocolate": 0,
+            "vanilla": 0,
+            "caramel": 0,
+            "honey": 5
+        },
+        "cost": 2.5
+    },
+    "mocha": {
+        "ingredients": {
+            "water": 150,
+            "milk": 140,
+            "coffee": 36,
+            "chocolate": 10,
+            "vanilla": 0,
+            "caramel": 0,
+            "honey": 0
+        },
+        "cost": 3.5
     }
 }
