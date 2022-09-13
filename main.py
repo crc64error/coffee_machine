@@ -1,10 +1,13 @@
 # Rest in Peace Queen Elizabeth the 2nd of England. May you find rest.
+from ast import Pass
 from datetime import datetime
 from os import system
 import json
 from logo import logo
 from twilio.rest import Client
+import smtplib, ssl
 import config
+import uuid
 
 
 system('clear')
@@ -67,13 +70,13 @@ sms_enabled = False
 
 ############################ Step Thru and Notes #############################
 ##
-# Step 1: On machine boot:
+# Step 1: On machine boot: 
 # 1.1: Load the coin dispenser status from the coin_dispenser.json file
 # 1.2: Load the ingredient dispenser status from the ingredient_dispenser.json file
 # 1.3: Check Cleaning Status -> If Cleaning is required, cleaning_prompt = True, else cleaning_prompt = False
 # 1.4: Check Restock Status -> If Restock is required, refill_prompt = True, else refill_prompt = False
 # 1.5: Check Network Status -> If Network is down, network_prompt = True, else network_prompt = False, Notify Staff, SMS, Email
-# 1.6: Load Lifetime counters for beverages, ingredients, and coins into local variables
+# -1.6: Load Lifetime counters for beverages, ingredients, and coins into local variables
 # Step 2: On customer approach:
 # 2.1: Present menu for loyalty card
 # 2.1.1: If customer has a valid loyalty card
@@ -104,8 +107,8 @@ sms_enabled = False
 ############################ End Step Thru and Notes #############################
 
 
-# Step 1: On machine boot:
-# 1.1: Load the coin dispenser status from the coin_dispenser.json file
+# # Step 1: On machine boot:
+# # 1.1: Load the coin dispenser status from the coin_dispenser.json file
 # 1.2: Load the ingredient dispenser status from the ingredient_dispenser.json file
 # 1.3: Check Cleaning Status -> If Cleaning is required, cleaning_prompt = True, else cleaning_prompt = False
 # 1.4: Check Restock Status -> If Restock is required, refill_prompt = True, else refill_prompt = False
@@ -114,6 +117,64 @@ sms_enabled = False
 def boot_up():
     print("Boot Up")
     coin_dispenser = json_file_to_dict('process_records/coin_dispenser.json')
+    check_coin_dispenser(coin_dispenser)    
+    machine_consumables = json_file_to_dict('process_records/machine_consumables.json')
+    cleaning_prompt = json_file_to_dict('process_records/process_record.json')['cleaning_prompt']
+    refill_prompt = json_file_to_dict('process_records/process_record.json')['refill_prompt']
+    served_since_cleaning = json_file_to_dict('process_records/process_record.json')['beverages_served']['served_since_cleaning'] # if greater than 20, machine needs cleaned at open.
+    served_since_refill = json_file_to_dict('process_records/process_record.json')['beverages_served']['served_since_refill'] # if greater than 20, machine needs restocked at open.
+    if served_since_cleaning > 20:
+        cleaning_prompt = True
+        note_to_management = "Machine needed cleaned at open."
+        send_operational_alert(note_to_management)
+    if served_since_refill > 20:
+        note_to_management = "Machine needed restocked at open."
+        send_operational_alert(note_to_management)
+    network_test(boot_up=True)
+    if network_test == "Pass":
+        offline_prompt = False
+    else:
+        network_test = "Failed"
+        offline_prompt = True
+        note_to_management = "Network down at open."
+        send_operational_alert(note_to_management)
+    
+    menu(machine_consumables, coin_dispenser, cleaning_prompt, refill_prompt, offline_prompt)
+        
+        
+def check_coin_dispenser(coin_dispenser):
+    coin_prompt = False
+    if coin_dispenser['pennies'] < 50:
+        note_to_management = "Pennies low"
+        coin_prompt = True
+        send_operational_alert(note_to_management)
+    elif coin_dispenser['nickels'] < 30:
+        note_to_management = "Nickels low"
+        coin_prompt = True
+        send_operational_alert(note_to_management)
+    elif coin_dispenser['dimes'] < 30:
+        note_to_management = "Dimes low"
+        coin_prompt = True
+        send_operational_alert(note_to_management)
+    elif coin_dispenser['quarters'] < 30:
+        note_to_management = "Quarters low"
+        coin_prompt = True
+        send_operational_alert(note_to_management)
+    elif coin_dispenser['half_dollars'] < 30:
+        note_to_management = "Half Dollars low"
+        coin_prompt = True
+        send_operational_alert(note_to_management)
+    elif coin_dispenser['dollars'] < 30:
+        note_to_management = "Dollars low"
+        coin_prompt = True
+        send_operational_alert(note_to_management)
+    return coin_prompt
+    
+def send_operational_alert(note_to_management):
+    print("Send Operational Alert")
+    if sms_enabled:
+        send_sms(note_to_management)
+    send_email(note_to_management)
     
 def send_sms(sms_message, sms_enabled):
     if sms_enabled == True:
@@ -131,35 +192,174 @@ def send_sms(sms_message, sms_enabled):
         client = Client(account_sid, auth_token) 
     
         message = client.messages.create(   
-            messaging_service_sid='MGd22f7aab949a6990d2308c71466f2b40',
+            messaging_service_sid= config.messaging_service_sid,
             body= sms_message,      
             to=config.account_receiver
         )
         # print(message.sid)
     else:
         print("SMS Disabled, Contact Staff!")
+        send_email(sms_message, sms_enabled)
     sms_records = message.sid
-        
-    
-def menu():
+
+def send_email(sms_message, sms_enabled):
+    port = 465  # For SSL
+    password = config.email_password
+
+    # Create a secure SSL context
+    context = ssl.create_default_context()
+
+    with smtplib.SMTP_SSL(config.email_server, port, context=context) as server:
+        server.login(config.service_email, config.email_password)
+
+# Step 2: On customer approach:
+# 2.1: Present menu for loyalty card
+# 2.1.1: If customer has a valid loyalty card
+# 2.1.2: Check network for account updates, if updates are found, update local variables in loyalty_customers/loyalty_customers.py {dict}
+# 2.1.3: Load loyalty discount to local variable
+# 2.2: Check for available beverages -> menu_options
+# 2.3: Present menu for beverage selection
+# 2.4: Present menu for beverage size
+# 2.5: Present menu for beverage extras
+
+# Do you have a loyalty Card? Yes/No
+def check_discount(loyalty_card):
+    loyalty_discount = max(loyalty_card['number_of_visits_in_last_year'] * 0.1, 30) # 30% discount is the max, 300 visits in a year, generous.
+    return loyalty_discount
+
+def menu(machine_consumables, coin_dispenser, cleaning_prompt, refill_prompt, offline_prompt):
+    while cleaning_prompt == False and refill_prompt == False and offline_prompt == False:
+        print("Menu")
+        print("Do you have a loyalty card? Yes/No")
+        loyalty_card = input("Scan your loyalty card or type 'No' if you do not have one: ") # For pretend, a loyalty card is the member id
+        loyalty_accounts = json_file_to_dict('loyalty_customers/loyalty_customers.json')
+        if loyalty_card in loyalty_accounts:
+            print("Loyalty Card Accepted")
+            loyalty_card = loyalty_accounts['Customers'][loyalty_card]
+            loyalty_discount = check_discount(loyalty_card)
+            print("Your loyalty discount is: " + str(loyalty_discount) + "%")
+        elif loyalty_card == "No":
+            loyalty_card = False
+            loyalty_discount = 0
+            print("Sign up for a loyalty account with the qrcode on your receipt!")
+        else:
+            print("Invalid Input")
+        menu_options = []  # Starting point for tomorrow
+        for beverage in machine_consumables:
+            if machine_consumables[beverage]['available'] == True:
+                menu_options.append(beverage)
+        print("Menu Options: ", menu_options)
+        print("What would you like to order?")
+        beverage = input()
+        if beverage in menu_options:
+            print("Beverage Selected: ", beverage)
+        else:
+            print("Invalid Input")
+            menu(machine_consumables, coin_dispenser, cleaning_prompt, refill_prompt, offline_prompt)
+        print("What size would you like?")
+        size = input()
+        if size in machine_consumables[beverage]['sizes']:
+            print("Size Selected: ", size)
+        else:
+            print("Invalid Input")
+            menu(machine_consumables, coin_dispenser, cleaning_prompt, refill_prompt, offline_prompt)
+        print("Would you like any extras?")
+        extras = input()
+        if extras in machine_consumables[beverage]['extras']:
+            print("Extras Selected: ", extras)
+        else:
+            print("Invalid Input")
+            menu(machine_consumables, coin_dispenser, cleaning_prompt, refill_prompt, offline_prompt)
+        print("Please insert coins")
+        payment(machine_consumables, coin_dispenser, beverage, size, extras, loyalty_card, loyalty_discount)
+    print("Menu")
+    menu_options = json_file_to_dict('menu_options.json')
+    menu_options = menu_options['menu_options']
+    print(menu_options)
+    menu_selection = input("Please select a beverage: ")
+    if menu_selection == "1":
+        print("You selected a small coffee")
+        beverage = "coffee"
+        size = "small"
+        extras = "none"
+        return beverage, size, extras
+    elif menu_selection == "2":
+        print("You selected a medium coffee")
+        beverage = "coffee"
+        size = "medium"
+        extras = "none"
+        return beverage, size, extras
+    elif menu_selection == "3":
+        print("You selected a large coffee")
+        beverage = "coffee"
+        size = "large"
+        extras = "none"
+        return beverage, size, extras
+    elif menu_selection == "4":
+        print("You selected a small tea")
+        beverage = "tea"
+        size = "small"
+        extras = "none"
+        return beverage, size, extras
+    elif menu_selection == "5":
+        print("You selected a medium tea")
+        beverage = "tea"
+        size = "medium"
+        extras = "none"
+        return beverage, size, extras
+    elif menu_selection == "6":
+        print("You selected a large tea")
+        beverage = "tea"
+        size = "large"
+        extras = "none"
+        return beverage, size, extras
+    elif menu_selection == "7":
+        print("You selected a small soda")
+        beverage = "soda"
+        size = "small"
+        extras = "none"
+        return beverage, size, extras
+    elif menu_selection == "8":
+        print("You selected a medium soda")
+        beverage = "soda"
+        size = "medium"
+        extras = "none"
+        return beverage, size, extras
+    elif menu_selection == "9":
+        print("You selected a large soda")
+        beverage = "soda"
+        size = "large"
+        extras = "none"
+        return beverage, size, extras
+    elif menu_selection == "10":
+        print("You selected a small juice")
+        beverage = "juice"
+        size = "small"
+        extras = "none"
+        return beverage, size, extras
+    elif menu_selection == "11":
+        print("You selected a medium juice")
+        beverage =
+
+def menu_old():
     # Populate the menu with the available beverages
     if coffee <= 500 or milk <= 1000 or water <= 1000 or cups <= 40 or chocolate <= 500 or vanilla <= 100 or honey <= 100:
         contact_staff(sms_message="Coffee Machine needs attemtion, please restock!", sms_enabled)
         
     if water <= 400 and water > 350:
-        contact_staff(sms_message="Coffee Machine needs attemtion, water is low, please restock!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, water is low, please restock!", sms_enabled)
     elif water <= 350:
-        contact_staff(sms_message="Coffee Machine needs attemtion, water is empty, machine is disabled!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, water is empty, machine is disabled!", sms_enabled)
         
     if coffee <= 200 and coffee > 64:
-        contact_staff(sms_message="Coffee Machine needs attemtion, coffee is low, please restock!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, coffee is low, please restock!", sms_enabled)
     elif coffee <= 64:
-        contact_staff(sms_message="Coffee Machine needs attemtion, coffee is empty, machine is disabled!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, coffee is empty, machine is disabled!", sms_enabled)
         
     if milk <= 600 and milk > 150:
-        contact_staff(sms_message="Coffee Machine needs attemtion, milk is low, please restock!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, milk is low, please restock!", sms_enabled)
     elif milk <= 150:
-        contact_staff(sms_message="Coffee Machine needs attemtion, milk is empty, machine is disabled!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, milk is empty, machine is disabled!", sms_enabled)
         latte = False
         Vanilla_Cappuccino = False
         Caramel_Cappuccino = False
@@ -167,39 +367,39 @@ def menu():
         mocha = False
         
     if cups <= 20 and cups > 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, cups are low, please restock!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, cups are low, please restock!", sms_enabled)
     elif cups <= 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, cups are empty, machine is disabled!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, cups are empty, machine is disabled!", sms_enabled)
         
     if chocolate <= 100 and chocolate > 20:
-        contact_staff(sms_message="Coffee Machine needs attemtion, chocolate is low, please restock!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, chocolate is low, please restock!", sms_enabled)
     elif chocolate <= 20:
-        contact_staff(sms_message="Coffee Machine needs attemtion, chocolate is empty, Mocha is disabled!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, chocolate is empty, Mocha is disabled!", sms_enabled)
         mocha = False
     
     if vanilla <= 20 and vanilla > 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, vanilla is low, please restock!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, vanilla is low, please restock!", sms_enabled)
     elif vanilla <= 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, vanilla is empty, Vanilla Cappuccino is disabled!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, vanilla is empty, Vanilla Cappuccino is disabled!", sms_enabled)
         vanilla_cappuccino = False
     
     if honey <= 20 and honey > 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, honey is low, please restock!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, honey is low, please restock!", sms_enabled)
     elif honey <= 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, honey is empty, Cortado is disabled!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, honey is empty, Cortado is disabled!", sms_enabled)
         cortado = False
     
     if caramel <= 40 and caramel > 10:
-        contact_staff(sms_message="Coffee Machine needs attemtion, caramel is low, please restock!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, caramel is low, please restock!", sms_enabled)
     elif caramel <= 10:
-        contact_staff(sms_message="Coffee Machine needs attemtion, caramel is empty, Caramel Cappuccino is disabled!")
+        contact_staff(sms_message="Coffee Machine needs attemtion, caramel is empty, Caramel Cappuccino is disabled!", sms_enabled)
         caramel_cappuccino = False
         
 
         
 def contact_staff(sms_message):
     print("Please contact a staff member.")
-    send_sms(sms_message)
+    send_sms(sms_message, sms_enabled)
     send_email()
     staff_contacted = True
     while staff_contacted == True:
@@ -520,11 +720,11 @@ def prepare_beverage(transaction_record, in_machine_ingredients, beverage_served
     
 
 # Menu Toggles Should be False on boot for initial setup
-cleaning_prompt = False
-refill_prompt = False
-have_an_espresso = True
-have_a_late = True
-have_a_cappuccino = True
+# cleaning_prompt = False
+# refill_prompt = False
+# have_an_espresso = True
+# have_a_late = True
+# have_a_cappuccino = True
 
 # in_machine_resources
 def get_in_machine_quantities(in_machine_till, in_machine_coin_dispenser, in_machine_water, in_machine_milk, in_machine_coffee, in_machine_cups, machine_nickels, machine_dimes, machine_quarters, machine_halves, machine_dollars):
