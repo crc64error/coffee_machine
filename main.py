@@ -59,12 +59,12 @@ value_of_coins = 0.00
 value_of_till = 0.00
 till_deposit = {'income': 0, 'till': 0}
 # Coins in machine
-pennies = 0
-nickels = 0
-dimes = 0
-quarters = 0
-halves = 0
-dollars = 0
+# pennies = 0
+# nickels = 0
+# dimes = 0
+# quarters = 0
+# halves = 0
+# dollars = 0
 
 sms_enabled = False
 
@@ -176,7 +176,7 @@ def send_operational_alert(note_to_management):
         send_sms(note_to_management)
     send_email(note_to_management)
     
-def send_sms(sms_message, sms_enabled):
+def send_sms(sms_enabled, sms_message):
     if sms_enabled == True:
         account_sid = config.account_sid
         auth_token = config.auth_token
@@ -199,10 +199,10 @@ def send_sms(sms_message, sms_enabled):
         # print(message.sid)
     else:
         print("SMS Disabled, Contact Staff!")
-        send_email(sms_message, sms_enabled)
+        send_email(sms_enabled, sms_message, sms_enabled)
     sms_records = message.sid
 
-def send_email(sms_message, sms_enabled):
+def send_email(sms_enabled, sms_message):
     port = 465  # For SSL
     password = config.email_password
 
@@ -271,7 +271,7 @@ def menu(machine_consumables, coin_dispenser, cleaning_prompt, refill_prompt, of
             print("Invalid Input")
             menu(machine_consumables, coin_dispenser, cleaning_prompt, refill_prompt, offline_prompt)
         print("Please insert coins")
-        payment(machine_consumables, coin_dispenser, beverage, size, extras, loyalty_card, loyalty_discount)
+        # payment(machine_consumables, coin_dispenser, beverage, size, extras, loyalty_card, loyalty_discount)
     print("Menu")
     menu_options = json_file_to_dict('menu_options.json')
     menu_options = menu_options['menu_options']
@@ -339,67 +339,66 @@ def menu(machine_consumables, coin_dispenser, cleaning_prompt, refill_prompt, of
         return beverage, size, extras
     elif menu_selection == "11":
         print("You selected a medium juice")
-        beverage =
+        beverage = "Unknown"
 
-def menu_old():
+def menu_old(machine_consumables, coin_dispenser, cleaning_prompt, refill_prompt, offline_prompt, sms_enabled):
     # Populate the menu with the available beverages
-    if coffee <= 500 or milk <= 1000 or water <= 1000 or cups <= 40 or chocolate <= 500 or vanilla <= 100 or honey <= 100:
-        contact_staff(sms_message="Coffee Machine needs attemtion, please restock!", sms_enabled)
+    if machine_consumables['coffee'] <= 500 or machine_consumables['milk'] <= 1000 or machine_consumables['water'] <= 1000 or machine_consumables['cups'] <= 40 or machine_consumables['chocolate'] <= 500 or machine_consumables['vanilla'] <= 100 or machine_consumables['honey'] <= 100:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, please restock!")
+    if machine_consumables['water'] <= 400 and machine_consumables['water'] > 350:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, water is low, please restock!")
+    elif machine_consumables['water'] <= 350:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, water is empty, machine is disabled!")
         
-    if water <= 400 and water > 350:
-        contact_staff(sms_message="Coffee Machine needs attemtion, water is low, please restock!", sms_enabled)
-    elif water <= 350:
-        contact_staff(sms_message="Coffee Machine needs attemtion, water is empty, machine is disabled!", sms_enabled)
+    if machine_consumables['coffee'] <= 200 and machine_consumables['coffee'] > 64:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, coffee is low, please restock!")
+    elif machine_consumables['coffee'] <= 64:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, coffee is empty, machine is disabled!")
         
-    if coffee <= 200 and coffee > 64:
-        contact_staff(sms_message="Coffee Machine needs attemtion, coffee is low, please restock!", sms_enabled)
-    elif coffee <= 64:
-        contact_staff(sms_message="Coffee Machine needs attemtion, coffee is empty, machine is disabled!", sms_enabled)
-        
-    if milk <= 600 and milk > 150:
-        contact_staff(sms_message="Coffee Machine needs attemtion, milk is low, please restock!", sms_enabled)
-    elif milk <= 150:
-        contact_staff(sms_message="Coffee Machine needs attemtion, milk is empty, machine is disabled!", sms_enabled)
+    if machine_consumables['milk'] <= 600 and machine_consumables['milk'] > 150:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, milk is low, please restock!")
+    elif machine_consumables['milk'] <= 150:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, milk is empty, machine is disabled!")
         latte = False
         Vanilla_Cappuccino = False
         Caramel_Cappuccino = False
         Cortado = False
         mocha = False
         
-    if cups <= 20 and cups > 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, cups are low, please restock!", sms_enabled)
-    elif cups <= 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, cups are empty, machine is disabled!", sms_enabled)
+    if machine_consumables['cups'] <= 20 and machine_consumables['cups'] > 5:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, cups are low, please restock!")
+    elif machine_consumables['cups'] <= 5:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, cups are empty, machine is disabled!")
         
-    if chocolate <= 100 and chocolate > 20:
-        contact_staff(sms_message="Coffee Machine needs attemtion, chocolate is low, please restock!", sms_enabled)
-    elif chocolate <= 20:
-        contact_staff(sms_message="Coffee Machine needs attemtion, chocolate is empty, Mocha is disabled!", sms_enabled)
+    if machine_consumables['chocolate'] <= 100 and machine_consumables['chocolate'] > 20:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, chocolate is low, please restock!")
+    elif machine_consumables['chocolate'] <= 20:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, chocolate is empty, Mocha is disabled!")
         mocha = False
     
-    if vanilla <= 20 and vanilla > 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, vanilla is low, please restock!", sms_enabled)
-    elif vanilla <= 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, vanilla is empty, Vanilla Cappuccino is disabled!", sms_enabled)
+    if machine_consumables['vanilla'] <= 20 and machine_consumables['vanilla'] > 5:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, vanilla is low, please restock!")
+    elif machine_consumables['vanilla'] <= 5:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, vanilla is empty, Vanilla Cappuccino is disabled!")
         vanilla_cappuccino = False
     
-    if honey <= 20 and honey > 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, honey is low, please restock!", sms_enabled)
-    elif honey <= 5:
-        contact_staff(sms_message="Coffee Machine needs attemtion, honey is empty, Cortado is disabled!", sms_enabled)
+    if machine_consumables['honey'] <= 20 and machine_consumables['honey'] > 5:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, honey is low, please restock!")
+    elif machine_consumables['honey'] <= 5:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, honey is empty, Cortado is disabled!")
         cortado = False
     
-    if caramel <= 40 and caramel > 10:
-        contact_staff(sms_message="Coffee Machine needs attemtion, caramel is low, please restock!", sms_enabled)
-    elif caramel <= 10:
-        contact_staff(sms_message="Coffee Machine needs attemtion, caramel is empty, Caramel Cappuccino is disabled!", sms_enabled)
+    if machine_consumables['caramel'] <= 40 and machine_consumables['caramel'] > 10:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, caramel is low, please restock!")
+    elif machine_consumables['caramel'] <= 10:
+        contact_staff(sms_enabled, sms_message="Coffee Machine needs attemtion, caramel is empty, Caramel Cappuccino is disabled!")
         caramel_cappuccino = False
         
 
         
-def contact_staff(sms_message):
+def contact_staff(sms_enabled, sms_message):
     print("Please contact a staff member.")
-    send_sms(sms_message, sms_enabled)
+    send_sms(sms_enabled, sms_message, sms_enabled)
     send_email()
     staff_contacted = True
     while staff_contacted == True:
@@ -593,7 +592,7 @@ def make_some_money(transaction_record):
     check_tender(transaction_record)
     
     
-def check_tender(transaction_record):
+def check_tender(transaction_record, refill_prompt):
     get_value_of_coins(transaction_record)
     if transaction_record['tender'] < transaction_record['price']:
         transaction_record['balance'] = transaction_record['price'] - transaction_record['tender']
@@ -606,7 +605,7 @@ def check_tender(transaction_record):
         prepare_beverage(transaction_record, in_machine_ingredients, beverage_served_counter, refill_prompt)
     print(f"check_tender: {transaction_record}")
         
-def give_change(transaction_record, coin_dispenser):
+def give_change(transaction_record, coin_dispenser, refill_prompt):
     print("give_change")
     change = transaction_record['change']
     while change >= 1.00 and coin_dispenser['machine_dollars'] > 0:
@@ -640,7 +639,7 @@ def give_change(transaction_record, coin_dispenser):
     prepare_beverage(transaction_record, in_machine_ingredients, beverage_served_counter, refill_prompt, till_deposit, till_dump)
 
     
-def prepare_beverage(transaction_record, in_machine_ingredients, beverage_served_counter, refill_prompt):
+def prepare_beverage(transaction_record, in_machine_ingredients, beverage_served_counter, cleaning_prompt, refill_prompt):
     print("prepare_beverage")
     if transaction_record['selection'] == "espresso":
         print(espresso_menu)
